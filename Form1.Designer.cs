@@ -1,4 +1,4 @@
-﻿namespace GridConfig
+﻿namespace GridConfigV2
 {
     partial class Form1
     {
@@ -28,126 +28,122 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.label1 = new System.Windows.Forms.Label();
-            this.txtX = new System.Windows.Forms.TextBox();
-            this.label2 = new System.Windows.Forms.Label();
-            this.btnCreateGrid = new System.Windows.Forms.Button();
-            this.txtY = new System.Windows.Forms.TextBox();
-            this.txtZ = new System.Windows.Forms.TextBox();
-            this.label3 = new System.Windows.Forms.Label();
-            this.label4 = new System.Windows.Forms.Label();
+            this.components = new System.ComponentModel.Container();
+            this.gridInputGroupBox = new System.Windows.Forms.GroupBox();
+            this.xGridInputLabel = new System.Windows.Forms.Label();
+            this.yGridInputLabel = new System.Windows.Forms.Label();
+            this.zGridInputLabel = new System.Windows.Forms.Label();
+            this.xGridInputTextBox = new System.Windows.Forms.TextBox();
+            this.yGridInputTextBox = new System.Windows.Forms.TextBox();
+            this.zGridInputTextBox = new System.Windows.Forms.TextBox();
+            this.CreateGridbtn = new System.Windows.Forms.Button();
+            this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.gridInputGroupBox.SuspendLayout();
             this.SuspendLayout();
             // 
-            // label1
+            // gridInputGroupBox
             // 
-            this.label1.AutoSize = true;
-            this.label1.BackColor = System.Drawing.SystemColors.ButtonFace;
-            this.label1.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
-            this.label1.Location = new System.Drawing.Point(113, 9);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(118, 13);
-            this.label1.TabIndex = 0;
-            this.label1.Text = "Coordinates and Labels";
+            this.gridInputGroupBox.Controls.Add(this.xGridInputLabel);
+            this.gridInputGroupBox.Controls.Add(this.yGridInputLabel);
+            this.gridInputGroupBox.Controls.Add(this.zGridInputLabel);
+            this.gridInputGroupBox.Controls.Add(this.xGridInputTextBox);
+            this.gridInputGroupBox.Controls.Add(this.yGridInputTextBox);
+            this.gridInputGroupBox.Controls.Add(this.zGridInputTextBox);
+            this.gridInputGroupBox.Controls.Add(this.CreateGridbtn);
+            this.gridInputGroupBox.Location = new System.Drawing.Point(12, 12);
+            this.gridInputGroupBox.Name = "gridInputGroupBox";
+            this.gridInputGroupBox.Size = new System.Drawing.Size(450, 155);
+            this.gridInputGroupBox.TabIndex = 8;
+            this.gridInputGroupBox.TabStop = false;
+            this.gridInputGroupBox.Text = "Custom Grid Input";
             // 
-            // txtX
+            // xGridInputLabel
             // 
-            this.txtX.ForeColor = System.Drawing.SystemColors.WindowFrame;
-            this.txtX.Location = new System.Drawing.Point(32, 35);
-            this.txtX.Name = "txtX";
-            this.txtX.Size = new System.Drawing.Size(308, 20);
-            this.txtX.TabIndex = 1;
+            this.xGridInputLabel.AutoSize = true;
+            this.xGridInputLabel.Location = new System.Drawing.Point(17, 22);
+            this.xGridInputLabel.Name = "xGridInputLabel";
+            this.xGridInputLabel.Size = new System.Drawing.Size(14, 13);
+            this.xGridInputLabel.TabIndex = 0;
+            this.xGridInputLabel.Text = "X";
             // 
-            // label2
+            // yGridInputLabel
             // 
-            this.label2.AutoSize = true;
-            this.label2.BackColor = System.Drawing.SystemColors.ButtonFace;
-            this.label2.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
-            this.label2.Location = new System.Drawing.Point(12, 38);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(14, 13);
-            this.label2.TabIndex = 5;
-            this.label2.Text = "X";
+            this.yGridInputLabel.AutoSize = true;
+            this.yGridInputLabel.Location = new System.Drawing.Point(17, 51);
+            this.yGridInputLabel.Name = "yGridInputLabel";
+            this.yGridInputLabel.Size = new System.Drawing.Size(14, 13);
+            this.yGridInputLabel.TabIndex = 1;
+            this.yGridInputLabel.Text = "Y";
             // 
-            // btnCreateGrid
+            // zGridInputLabel
             // 
-            this.btnCreateGrid.Location = new System.Drawing.Point(136, 120);
-            this.btnCreateGrid.Name = "btnCreateGrid";
-            this.btnCreateGrid.Size = new System.Drawing.Size(75, 24);
-            this.btnCreateGrid.TabIndex = 14;
-            this.btnCreateGrid.Text = "Create Grid";
-            this.btnCreateGrid.UseVisualStyleBackColor = true;
-            this.btnCreateGrid.Click += new System.EventHandler(this.btnCreateGrid_Click);
+            this.zGridInputLabel.AutoSize = true;
+            this.zGridInputLabel.Location = new System.Drawing.Point(17, 80);
+            this.zGridInputLabel.Name = "zGridInputLabel";
+            this.zGridInputLabel.Size = new System.Drawing.Size(14, 13);
+            this.zGridInputLabel.TabIndex = 2;
+            this.zGridInputLabel.Text = "Z";
             // 
-            // txtY
+            // xGridInputTextBox
             // 
-            this.txtY.ForeColor = System.Drawing.SystemColors.WindowFrame;
-            this.txtY.Location = new System.Drawing.Point(32, 64);
-            this.txtY.Name = "txtY";
-            this.txtY.Size = new System.Drawing.Size(308, 20);
-            this.txtY.TabIndex = 25;
+            this.xGridInputTextBox.Location = new System.Drawing.Point(37, 19);
+            this.xGridInputTextBox.Name = "xGridInputTextBox";
+            this.xGridInputTextBox.Size = new System.Drawing.Size(390, 20);
+            this.xGridInputTextBox.TabIndex = 3;
             // 
-            // txtZ
+            // yGridInputTextBox
             // 
-            this.txtZ.ForeColor = System.Drawing.SystemColors.WindowFrame;
-            this.txtZ.Location = new System.Drawing.Point(32, 94);
-            this.txtZ.Name = "txtZ";
-            this.txtZ.Size = new System.Drawing.Size(308, 20);
-            this.txtZ.TabIndex = 26;
+            this.yGridInputTextBox.Location = new System.Drawing.Point(37, 48);
+            this.yGridInputTextBox.Name = "yGridInputTextBox";
+            this.yGridInputTextBox.Size = new System.Drawing.Size(390, 20);
+            this.yGridInputTextBox.TabIndex = 4;
             // 
-            // label3
+            // zGridInputTextBox
             // 
-            this.label3.AutoSize = true;
-            this.label3.BackColor = System.Drawing.SystemColors.ButtonFace;
-            this.label3.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
-            this.label3.Location = new System.Drawing.Point(12, 67);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(14, 13);
-            this.label3.TabIndex = 27;
-            this.label3.Text = "Y";
+            this.zGridInputTextBox.Location = new System.Drawing.Point(37, 77);
+            this.zGridInputTextBox.Name = "zGridInputTextBox";
+            this.zGridInputTextBox.Size = new System.Drawing.Size(390, 20);
+            this.zGridInputTextBox.TabIndex = 5;
             // 
-            // label4
+            // CreateGridbtn
             // 
-            this.label4.AutoSize = true;
-            this.label4.BackColor = System.Drawing.SystemColors.ButtonFace;
-            this.label4.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
-            this.label4.Location = new System.Drawing.Point(12, 97);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(14, 13);
-            this.label4.TabIndex = 28;
-            this.label4.Text = "Z";
+            this.CreateGridbtn.Location = new System.Drawing.Point(37, 112);
+            this.CreateGridbtn.Name = "CreateGridbtn";
+            this.CreateGridbtn.Size = new System.Drawing.Size(79, 28);
+            this.CreateGridbtn.TabIndex = 6;
+            this.CreateGridbtn.Text = "Create Grid";
+            this.CreateGridbtn.UseVisualStyleBackColor = true;
+            this.CreateGridbtn.Click += new System.EventHandler(this.CreateGridbtn_Click);
+            // 
+            // contextMenuStrip1
+            // 
+            this.contextMenuStrip1.Name = "contextMenuStrip1";
+            this.contextMenuStrip1.Size = new System.Drawing.Size(61, 4);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.BackColor = System.Drawing.SystemColors.ActiveBorder;
-            this.ClientSize = new System.Drawing.Size(350, 156);
-            this.Controls.Add(this.label4);
-            this.Controls.Add(this.label3);
-            this.Controls.Add(this.txtZ);
-            this.Controls.Add(this.txtY);
-            this.Controls.Add(this.btnCreateGrid);
-            this.Controls.Add(this.label2);
-            this.Controls.Add(this.txtX);
-            this.Controls.Add(this.label1);
-            this.Cursor = System.Windows.Forms.Cursors.Arrow;
+            this.ClientSize = new System.Drawing.Size(473, 178);
+            this.Controls.Add(this.gridInputGroupBox);
             this.Name = "Form1";
             this.Text = "Grid Configuration";
+            this.gridInputGroupBox.ResumeLayout(false);
+            this.gridInputGroupBox.PerformLayout();
             this.ResumeLayout(false);
-            this.PerformLayout();
 
         }
 
         #endregion
-
-        private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.TextBox txtX;
-        private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.Button btnCreateGrid;
-        private System.Windows.Forms.TextBox txtY;
-        private System.Windows.Forms.TextBox txtZ;
-        private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.GroupBox gridInputGroupBox;
+        private System.Windows.Forms.Label xGridInputLabel;
+        private System.Windows.Forms.Label yGridInputLabel;
+        private System.Windows.Forms.Label zGridInputLabel;
+        private System.Windows.Forms.TextBox xGridInputTextBox;
+        private System.Windows.Forms.TextBox yGridInputTextBox;
+        private System.Windows.Forms.TextBox zGridInputTextBox;
+        private System.Windows.Forms.Button CreateGridbtn;
+        private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
     }
 }
 

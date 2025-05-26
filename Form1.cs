@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
@@ -8,533 +8,445 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Globalization;
 
+using Tekla.Structures;
 using Tekla.Structures.Model;
 using Tekla.Structures.Geometry3d;
-using System.Diagnostics.PerformanceData;
 using T3D = Tekla.Structures.Geometry3d;
 
-namespace GridConfig
+namespace GridConfigV2
 {
     public partial class Form1 : Form
     {
         private Model model;
+        
         public Form1()
         {
-            InitializeComponent();
-
             model = new Model();
-
-            // load existing grid data when the form starts
-            LoadExistingGridData();
+            InitializeComponent();
+            fillTextBoxes();
         }
 
-        private void btnCreateGrid_Click(object sender, EventArgs e)
+        public string CompressNumberSequence(string input)
         {
-            try
+            if (string.IsNullOrEmpty(input))
+                return string.Empty;
+
+            // First expand any multiplier notation like "4*3000.00"
+            List<double> numbers = new List<double>();
+            string[] parts = input.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            
+            foreach (string part in parts)
             {
-                if (!model.GetConnectionStatus())
+                if (part.Contains("*"))
                 {
-                    MessageBox.Show("Cannot connect to Tekla", "Connection Error");
-                    return;
-                }
-
-                // Get the coordinates from the text boxes
-                string xAxisInput = txtX.Text;
-                string yAxisInput = txtY.Text;
-                string zAxisInput = txtZ.Text;
-
-                // Parse the coordinates
-                Dictionary<string, double> xCoordinates = ParseCoordinates(xAxisInput);
-                Dictionary<string, double> yCoordinates = ParseCoordinates(yAxisInput);
-                Dictionary<string, double> zCoordinates = ParseCoordinates(zAxisInput);
-
-                // Decompose any combined labels (like "ABC") into individual labels for X and Y only
-                Dictionary<string, double> decomposedXCoordinates = DecomposeDimensions(xCoordinates);
-                Dictionary<string, double> decomposedYCoordinates = DecomposeDimensions(yCoordinates);
-
-                // Create the grid
-                CreateGrid(decomposedXCoordinates, decomposedYCoordinates, zCoordinates);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error creating grid: {ex.Message}", "Error");
-            }
-        }
-
-        private Dictionary<string, double> ParseCoordinates(string input)
-        {
-            Dictionary<string, double> coordinates = new Dictionary<string, double>();
-
-            if (string.IsNullOrWhiteSpace(input))
-            {
-                MessageBox.Show("Warning: Empty coordinate input detected. Please provide coordinates in the format 'Label:Value' (e.g., 'A:0 B:1500 C:3000').", "Input Warning");
-                return coordinates;
-            }
-
-            // Turn a string like "A:0 B:1500 C:3000" into pairs like "A:0" "B:1500" "C:3000"
-            foreach (string pair in input.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                // Split the pair into key and value e.g. "A:0" -> ["A", "1000"]
-                string[] parts = pair.Split(':');
-                if (parts.Length == 2)
-                {
-                    string key = parts[0].Trim();
-                    if (double.TryParse(parts[1].Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out double value))
-                        coordinates[key] = value;
-                    else
-                        MessageBox.Show($"Invalid dimension value: {parts[1].Trim()} for key: {key}");
-                }
-                else
-                {
-                    MessageBox.Show($"Invalid dimension format: {pair}");
-                }
-            }
-
-            return coordinates;
-        }
-        private void cumulateDimensions(Dictionary<string, double> dimensions)
-        {
-            double totalValue = 0;
-            List<string> keys = new List<string>(dimensions.Keys);
-
-            foreach (var key in keys)
-            {
-                totalValue += dimensions[key];
-                totalValue = Math.Round(totalValue, 6);
-                dimensions[key] = totalValue;
-            }
-        }
-
-        private void deleteExistingGrid()
-        {
-            try
-            {
-                // Step 1: Get all grid objects and delete them
-                ModelObjectEnumerator existingGrids = model.GetModelObjectSelector().GetAllObjectsWithType(ModelObject.ModelObjectEnum.GRID);
-                List<ModelObject> objectsToDelete = new List<ModelObject>();
-
-                while (existingGrids.MoveNext())
-                    objectsToDelete.Add(existingGrids.Current);
-
-                // Delete each grid
-                foreach (ModelObject obj in objectsToDelete)
-                    obj.Delete();
-
-                // Step 2: Delete any grid planes
-                objectsToDelete.Clear();
-                ModelObjectEnumerator existingGridPlanes = model.GetModelObjectSelector().GetAllObjectsWithType(ModelObject.ModelObjectEnum.GRIDPLANE);
-
-                while (existingGridPlanes.MoveNext())
-                    objectsToDelete.Add(existingGridPlanes.Current);
-
-                foreach (ModelObject obj in objectsToDelete)
-                    obj.Delete();
-
-                // Final commit to ensure everything is deleted before creating a new grid
-                model.CommitChanges();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Warning: Failed to delete existing grids: {ex.Message}", "Warning");
-            }
-        }
-        private void CreateGrid(Dictionary<string, double> xCoords, Dictionary<string, double> yCoords, Dictionary<string, double> zCoords)
-        {
-            try
-            {
-                // Get current transformation plane
-                TransformationPlane currentPlane = model.GetWorkPlaneHandler().GetCurrentTransformationPlane();
-
-                // First make sure no grids exist
-                deleteExistingGrid();
-
-                // Process cumulative dimensions
-                cumulateDimensions(xCoords);
-                cumulateDimensions(yCoords);
-                cumulateDimensions(zCoords);
-
-                // Get the maximum extents for the grid planes
-                double maxX = xCoords.Count > 0 ? xCoords.Values.Max() : 10000;
-                double maxY = yCoords.Count > 0 ? yCoords.Values.Max() : 10000;
-                double maxZ = zCoords.Count > 0 ? zCoords.Values.Max() : 10000;
-
-                // Use fixed extension buffer
-                const double extensionBuffer = 100;
-                double gridExtentX = maxX + extensionBuffer;
-                double gridExtentY = maxY + extensionBuffer;
-                double gridExtentZ = maxZ + extensionBuffer;
-
-                // Create a master Grid object - this is needed as the parent for GridPlanes
-                Grid masterGrid = new Grid();
-                masterGrid.Name = "UserDefinedGrid";
-
-                // Insert the master grid
-                if (!masterGrid.Insert())
-                    throw new Exception("Failed to insert the master grid");
-
-                // Commit the grid creation before adding planes
-                model.CommitChanges();
-
-                // Create the X grid planes (vertical planes along X axis)
-                foreach (var xCoord in xCoords)
-                {
-                    try
+                    // Handle multiplier notation (e.g., "4*3000.00")
+                    string[] multParts = part.Split('*');
+                    if (multParts.Length == 2 && int.TryParse(multParts[0], out int multCount) && 
+                        double.TryParse(multParts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
                     {
-                        // Create a new GridPlane
-                        GridPlane gridPlane = new GridPlane();
-
-                        Plane plane = new Plane();
-                        // The X planes have an origin that uses the X coordinate
-                        plane.Origin = new T3D.Point(xCoord.Value, -extensionBuffer, -extensionBuffer);
-                        plane.AxisX = new Vector(0, gridExtentY + extensionBuffer, 0);
-                        plane.AxisY = new Vector(0, 0, gridExtentZ + extensionBuffer);
-
-                        // Set properties
-                        gridPlane.Label = xCoord.Key;
-                        gridPlane.Plane = plane;
-                        gridPlane.IsMagnetic = true;
-                        gridPlane.Parent = masterGrid;
-
-                        // Insert the grid plane
-                        bool inserted = gridPlane.Insert();
-                        if (!inserted)
-                            MessageBox.Show($"Failed to insert X plane {xCoord.Key}", "Warning");
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Error creating X plane {xCoord.Key}: {ex.Message}", "Error");
-                    }
-                }
-
-                // Create the Y grid planes (vertical planes along Y axis)
-                foreach (var yCoord in yCoords)
-                {
-                    try
-                    {
-                        // Create a new GridPlane
-                        GridPlane gridPlane = new GridPlane();
-
-                        // Create a plane with much larger extent to ensure intersections
-                        Plane plane = new Plane();
-                        // The Y planes have an origin that uses the Y coordinate
-                        plane.Origin = new T3D.Point(-extensionBuffer, yCoord.Value, -extensionBuffer);
-                        plane.AxisX = new Vector(gridExtentX + extensionBuffer, 0, 0);
-                        plane.AxisY = new Vector(0, 0, gridExtentZ + extensionBuffer);
-
-                        // Set properties
-                        gridPlane.Label = yCoord.Key;
-                        gridPlane.Plane = plane;
-                        gridPlane.IsMagnetic = true;
-                        gridPlane.Parent = masterGrid;
-
-                        // Insert the grid plane
-                        bool inserted = gridPlane.Insert();
-                        if (!inserted)
-                            MessageBox.Show($"Failed to insert Y plane {yCoord.Key}", "Warning");
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Error creating Y plane {yCoord.Key}: {ex.Message}", "Error");
-                    }
-                }
-
-                // Create the Z grid planes (horizontal planes)
-                foreach (var zCoord in zCoords)
-                {
-                    try
-                    {
-                        // Create a new GridPlane
-                        GridPlane gridPlane = new GridPlane();
-
-                        // Create a plane with much larger extent to ensure intersections
-                        Plane plane = new Plane();
-                        plane.Origin = new T3D.Point(-extensionBuffer, -extensionBuffer, zCoord.Value);
-                        plane.AxisX = new Vector(gridExtentX + extensionBuffer, 0, 0);
-                        plane.AxisY = new Vector(0, gridExtentY + extensionBuffer, 0);
-
-                        // Set properties
-                        gridPlane.Label = zCoord.Key;
-                        gridPlane.Plane = plane;
-                        gridPlane.IsMagnetic = true;
-                        gridPlane.Parent = masterGrid;
-
-                        // Insert the grid plane
-                        bool inserted = gridPlane.Insert();
-                        if (!inserted)
-                            MessageBox.Show($"Failed to insert Z plane {zCoord.Key}", "Warning");
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Error creating Z plane {zCoord.Key}: {ex.Message}", "Error");
-                    }
-                }
-
-                model.CommitChanges();
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Error creating grid: {ex.Message}");
-            }
-        }
-
-        private Dictionary<string, double> CombineDimensionsWithSameValues(Dictionary<string, double> dimensions)
-        {
-            // Create a result dictionary
-            var result = new Dictionary<string, double>();
-
-            // Sort dimensions by value to ensure planes with the same coordinates are grouped together
-            var orderedDimensions = dimensions.OrderBy(kv => kv.Value).ToList();
-
-            // Process dimensions
-            int i = 0;
-            while (i < orderedDimensions.Count)
-            {
-                string currentKey = orderedDimensions[i].Key;
-                double currentValue = orderedDimensions[i].Value;
-
-                // Find consecutive dimensions with the same value
-                List<string> groupKeys = new List<string> { currentKey };
-                int j = i + 1;
-
-                while (j < orderedDimensions.Count &&
-                      Math.Abs(orderedDimensions[j].Value - currentValue) < 0.001)
-                {
-                    groupKeys.Add(orderedDimensions[j].Key);
-                    j++;
-                }
-
-                // Combine consecutive keys with the same value
-                if (groupKeys.Count > 1)
-                {
-                    // Sort the keys alphabetically for consistent combined keys
-                    groupKeys.Sort();
-                    string combinedKey = string.Join("", groupKeys);
-                    result[combinedKey] = currentValue;
-                }
-                else
-                {
-                    result[currentKey] = currentValue;
-                }
-
-                // Move to the next unprocessed dimension
-                i = j;
-            }
-
-            return result;
-        }
-
-        private Dictionary<string, double> DecomposeDimensions(Dictionary<string, double> dimensions)
-        {
-            var result = new Dictionary<string, double>();
-
-            foreach (var dimension in dimensions)
-            {
-                string combinedKey = dimension.Key;
-                double value = dimension.Value;
-
-                // Simple case: key doesn't need decomposition
-                if (combinedKey.Length == 1)
-                {
-                    result[combinedKey] = value;
-                    continue;
-                }
-
-                // Process complex key: we need to decompose it
-                int i = 0;
-                while (i < combinedKey.Length)
-                {
-                    // Start of a single key
-                    string singleKey = combinedKey[i].ToString();
-                    i++;
-
-                    // Check if there's a period after the current character
-                    if (i < combinedKey.Length && combinedKey[i] == '.')
-                    {
-                        // Add the period to the current key
-                        singleKey += '.';
-                        i++;
-
-                        // Add all consecutive digits after the period
-                        while (i < combinedKey.Length && char.IsDigit(combinedKey[i]))
+                        for (int idx = 0; idx < multCount; idx++)
                         {
-                            singleKey += combinedKey[i];
-                            i++;
+                            numbers.Add(value);
                         }
                     }
-
-                    // Add the decomposed dimension
-                    result[singleKey] = value;
+                    else
+                    {
+                        Console.WriteLine($"Warning: Could not parse multiplier notation '{part}'");
+                    }
+                }
+                else if (double.TryParse(part, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+                {
+                    numbers.Add(value);
+                }
+                else
+                {
+                    Console.WriteLine($"Warning: Could not parse '{part}' as a number");
                 }
             }
 
+            if (numbers.Count == 0)
+                return string.Empty;
+
+            // Now compress consecutive identical values
+            var result = new List<string>();
+            int seqCount = 1;
+            double currentNumber = numbers[0];
+
+            for (int i = 1; i < numbers.Count; i++)
+            {
+                if (Math.Abs(numbers[i] - currentNumber) < 0.000001) // Using small epsilon for double comparison
+                {
+                    seqCount++;
+                }
+                else
+                {
+                    result.Add(seqCount > 1 ? $"{seqCount}*{currentNumber.ToString(CultureInfo.InvariantCulture)}" : currentNumber.ToString(CultureInfo.InvariantCulture));
+                    currentNumber = numbers[i];
+                    seqCount = 1;
+                }
+            }
+
+            // Add the last number or sequence
+            result.Add(seqCount > 1 ? $"{seqCount}*{currentNumber.ToString(CultureInfo.InvariantCulture)}" : currentNumber.ToString(CultureInfo.InvariantCulture));
+
+            string output = string.Join(" ", result);
+            Console.WriteLine("CompressNumberSequence Output: " + output);
+            return output;
+        }
+
+        // Helper method to expand coordinates with multiplier notation
+        private List<double> ExpandCoordinates(string input)
+        {
+            List<double> result = new List<double>();
+            
+            if (string.IsNullOrEmpty(input))
+                return result;
+                
+            string[] parts = input.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            
+            foreach (string part in parts)
+            {
+                if (part.Contains("*"))
+                {
+                    // Handle multiplier notation (e.g., "4*3000.00")
+                    string[] multParts = part.Split('*');
+                    if (multParts.Length == 2 && int.TryParse(multParts[0], out int multCount) && 
+                        double.TryParse(multParts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+                    {
+                        for (int idx = 0; idx < multCount; idx++)
+                        {
+                            result.Add(value);
+                        }
+                    }
+                }
+                else if (double.TryParse(part, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+                {
+                    result.Add(value);
+                }
+            }
+            
             return result;
         }
 
-        private void LoadExistingGridData()
+        // Function to combine labels and values back into a compressed format
+        private string CombineLabelsAndValues(string labels, string values)
+        {
+            // Split the input strings
+            string[] labelArray = labels.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] valueArray = values.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            
+            // Process the values to expand any multiplier notation (e.g., "4*5000.00")
+            List<string> expandedValues = new List<string>();
+            foreach (string value in valueArray)
+            {
+                if (value.Contains("*"))
+                {
+                    string[] parts = value.Split('*');
+                    if (int.TryParse(parts[0], out int multCount) && parts.Length == 2)
+                    {
+                        for (int idx = 0; idx < multCount; idx++)
+                            expandedValues.Add(parts[1]);
+                    }
+                    else
+                    {
+                        expandedValues.Add(value); // If it can't be parsed properly, keep as is
+                    }
+                }
+                else
+                {
+                    expandedValues.Add(value);
+                }
+            }
+            
+            // Check if lengths match after expansion
+            if (labelArray.Length != expandedValues.Count)
+            {
+                // If not enough values, add default values to match
+                while (expandedValues.Count < labelArray.Length)
+                    expandedValues.Add("0.00");
+
+                // If too many values, truncate
+                if (expandedValues.Count > labelArray.Length)
+                    expandedValues = expandedValues.Take(labelArray.Length).ToList();
+            }
+            
+            // Group consecutive labels with the same value
+            var result = new List<string>();
+            int index = 0;
+            
+            while (index < labelArray.Length)
+            {
+                string currentLabel = labelArray[index];
+                string currentValue = expandedValues[index];
+                
+                // Find consecutive labels with the same value
+                int nextIndex = index + 1;
+                StringBuilder combinedLabel = new StringBuilder(currentLabel);
+                
+                while (nextIndex < labelArray.Length && expandedValues[nextIndex] == currentValue)
+                {
+                    // Skip if the current or next label contains a period
+                    if (currentLabel.Contains('.') || labelArray[nextIndex].Contains('.'))
+                    {
+                        // Don't combine if either has a period, but keep track of position
+                        if (nextIndex == index + 1) // if we're still at the first possible combine
+                            break;
+                        else // we were in the middle of combining
+                            break;
+                    }
+                    
+                    combinedLabel.Append(labelArray[nextIndex]);
+                    nextIndex++;
+                }
+                
+                // Add this dimensional group to the result
+                result.Add($"{combinedLabel}:{currentValue}");
+                
+                // Move to the next unprocessed label
+                index = nextIndex;
+            }
+            
+            return string.Join(" ", result);
+        }
+
+        // Specialized function to handle Z-axis grid labels which often use "+" prefix
+        private string CombineZLabelsAndValues(string labels, string values)
+        {
+            // Split the input strings
+            string[] labelArray = labels.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] valueArray = values.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            
+            // Create a mapping of values to their corresponding labels
+            Dictionary<string, string> valueToLabel = new Dictionary<string, string>();
+            
+            for (int i = 0; i < Math.Min(labelArray.Length, valueArray.Length); i++)
+            {
+                // Z-axis labels often have a "+" prefix - normalize the value for matching
+                string normalizedValue = NormalizeValue(valueArray[i]);
+                string normalizedLabel = labelArray[i];
+                
+                // Ensure the Z label has a "+" prefix if it's a numeric value
+                if (!normalizedLabel.StartsWith("+") && 
+                    double.TryParse(normalizedLabel.TrimStart('+'), NumberStyles.Float, CultureInfo.InvariantCulture, out _))
+                {
+                    // It's a number without a "+" prefix, add one
+                    normalizedLabel = "+" + normalizedLabel;
+                }
+                
+                valueToLabel[normalizedValue] = normalizedLabel;
+            }
+            
+            // Build the result in format "+0:0.00 +3000:3000.00"
+            var result = new List<string>();
+            foreach (var pair in valueToLabel)
+            {
+                result.Add($"{pair.Value}:{pair.Key}");
+            }
+            
+            return string.Join(" ", result);
+        }
+
+        // Specialized function to handle Z-axis grid labels with "+" prefix in DecomposeString
+        private (string, string) DecomposeZString(string input)
+        {
+            List<string> labels = new List<string>();
+            List<string> values = new List<string>();
+            
+            // Split the input string into parts (e.g., "+0:0", "+3000:3000")
+            string[] parts = input.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            
+            foreach (string part in parts)
+            {
+                // Find the position of the first colon (to handle values that might contain colons)
+                int colonIndex = part.IndexOf(':');
+                if (colonIndex <= 0) continue;
+                
+                string label = part.Substring(0, colonIndex);
+                string value = part.Substring(colonIndex + 1);
+                
+                // For Z-axis, we keep the "+" prefix in the label but ensure the value is just the number
+                if (label.StartsWith("+") && 
+                    double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double numValue))
+                {
+                    labels.Add(label);
+                    values.Add(numValue.ToString(CultureInfo.InvariantCulture));
+                }
+                else
+                {
+                    // Handle normal case
+                    labels.Add(label);
+                    values.Add(value);
+                }
+            }
+            
+            return (string.Join(" ", labels), string.Join(" ", values));
+        }
+
+        // Helper to normalize numeric values for comparison
+        private string NormalizeValue(string value)
+        {
+            if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double numValue))
+                return numValue.ToString(CultureInfo.InvariantCulture);
+                
+            return value;
+        }
+
+        private void fillTextBoxes()
+        {
+            if (!model.GetConnectionStatus())
+            {
+                MessageBox.Show("Not connected to Tekla Structures model.", "Error");
+                return;
+            }
+
+            ModelObjectEnumerator gridEnum = model.GetModelObjectSelector().GetAllObjectsWithType(ModelObject.ModelObjectEnum.GRID);
+            while (gridEnum.MoveNext())
+            {
+                Grid grid = gridEnum.Current as Grid;
+                if (grid != null)
+                {
+                    try 
+                    {   
+                        xGridInputTextBox.Text = CombineLabelsAndValues(grid.LabelX, grid.CoordinateX);
+                        yGridInputTextBox.Text = CombineLabelsAndValues(grid.LabelY, grid.CoordinateY);
+                        zGridInputTextBox.Text = CombineZLabelsAndValues(grid.LabelZ, grid.CoordinateZ);
+                        break; // Only process the first grid found
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Error processing grid data: " + ex.Message, "Error");
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("No grid found in the model.", "Error");
+                }
+            }
+        }
+
+        // Decompose dimensions directly from input string to labels and values strings
+        private (string, string) DecomposeString(string input)
+        {
+            List<string> labels = new List<string>();
+            List<string> values = new List<string>();
+            
+            // Split the input string into parts (e.g., "A:0", "BC:5000.12")
+            string[] parts = input.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            
+            foreach (string part in parts)
+            {
+                // Find the position of the first colon (to handle values that might contain colons)
+                int colonIndex = part.IndexOf(':');
+                if (colonIndex <= 0) continue;
+                
+                string combinedLabel = part.Substring(0, colonIndex);
+                string value = part.Substring(colonIndex + 1);
+                
+                // For single character labels
+                if (combinedLabel.Length == 1)
+                {
+                    labels.Add(combinedLabel);
+                    values.Add(value);
+                    continue;
+                }
+                
+                // Process combined label (like "BC" or "C.2D")
+                for (int i = 0; i < combinedLabel.Length; i++)
+                {
+                    // Start with current character
+                    string singleLabel = combinedLabel[i].ToString();
+                    
+                    // If followed by a period, collect the period and all digits
+                    if (i + 1 < combinedLabel.Length && combinedLabel[i + 1] == '.')
+                    {
+                        singleLabel += '.';
+                        i += 2; // Skip past the period
+                        
+                        // Collect all digits
+                        while (i < combinedLabel.Length && char.IsDigit(combinedLabel[i]))
+                        {
+                            singleLabel += combinedLabel[i];
+                            i++;
+                        }
+                        
+                        i--; // Adjust for the loop increment
+                    }
+                    
+                    labels.Add(singleLabel);
+                    values.Add(value);
+                }
+            }
+            
+            return (string.Join(" ", labels), string.Join(" ", values));
+        }
+
+        private void ModifyGridV2()
         {
             try
             {
-                // Check if connected to Tekla
-                if (!model.GetConnectionStatus())
-                    return;
-
-                // Collections to store the coordinates for each axis
-                Dictionary<string, double> xGrids = new Dictionary<string, double>();
-                Dictionary<string, double> yGrids = new Dictionary<string, double>();
-                Dictionary<string, double> zGrids = new Dictionary<string, double>();
-
-                // Get all grid planes from the model
-                ModelObjectEnumerator gridPlanes = model.GetModelObjectSelector().GetAllObjectsWithType(ModelObject.ModelObjectEnum.GRIDPLANE);
-
-                // Process each grid plane
-                while (gridPlanes.MoveNext())
+                // Collect Grid Data
+                ModelObjectEnumerator gridObjects = model.GetModelObjectSelector().GetAllObjectsWithType(ModelObject.ModelObjectEnum.GRID);
+                
+                if (!gridObjects.MoveNext())
                 {
-                    GridPlane gridPlane = gridPlanes.Current as GridPlane;
-                    if (gridPlane == null || string.IsNullOrEmpty(gridPlane.Label))
-                        continue;
-
-                    Plane plane = gridPlane.Plane;
-                    string label = gridPlane.Label;
-
-                    // Determine axis by plane orientation and label format
-                    DetermineGridAxis(plane, label, xGrids, yGrids, zGrids);
+                    MessageBox.Show("No grid found in the model.", "Error");
+                    return;
+                }
+                Grid existingGrid = gridObjects.Current as Grid;
+                if (existingGrid == null)
+                {
+                    MessageBox.Show("Failed to get grid object.", "Error");
+                    return;
                 }
 
-                // Convert to absolute coordinates to relative spacings for X and Y axes only
-                Dictionary<string, double> relativeXGrids = ConvertToRelativeSpacings(xGrids);
-                Dictionary<string, double> relativeYGrids = ConvertToRelativeSpacings(yGrids);
-                Dictionary<string, double> relativeZGrids = ConvertToRelativeSpacings(zGrids);
+                // Process the input to extract labels and coordinates
+                var xGridData = DecomposeString(xGridInputTextBox.Text);
+                var yGridData = DecomposeString(yGridInputTextBox.Text);
+                var zGridData = DecomposeZString(zGridInputTextBox.Text); // Use Z-specific parsing
 
-                // Combine dimensions with same values for X and Y axes only
-                Dictionary<string, double> combinedXGrids = CombineDimensionsWithSameValues(relativeXGrids);
-                Dictionary<string, double> combinedYGrids = CombineDimensionsWithSameValues(relativeYGrids);
+                // Update the grid properties
+                existingGrid.LabelX = xGridData.Item1;
+                existingGrid.CoordinateX = xGridData.Item2;
+                
+                existingGrid.LabelY = yGridData.Item1;
+                existingGrid.CoordinateY = yGridData.Item2;
+                
+                existingGrid.LabelZ = zGridData.Item1;
+                existingGrid.CoordinateZ = zGridData.Item2;
 
-                // Format output for each axis
-                if (xGrids.Count > 0) txtX.Text = FormatGridsForDisplay(combinedXGrids);
-                if (yGrids.Count > 0) txtY.Text = FormatGridsForDisplay(combinedYGrids);
-                if (zGrids.Count > 0) txtZ.Text = FormatGridsForDisplay(relativeZGrids);
+                // Modify the grid
+                bool result = existingGrid.Modify();
+
+                // Commit changes to model
+                model.CommitChanges("Modified grid");
+
+                // Refresh the textboxes with the new grid data
+                fillTextBoxes();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading grid data: {ex.Message}", "Error");
+                MessageBox.Show("Error modifying grids: " + ex.Message, "Error");
             }
         }
 
-        private Dictionary<string, double> ConvertToRelativeSpacings(Dictionary<string, double> absoluteGrids)
+        private void DeleteAllGrids()
         {
-            var result = new Dictionary<string, double>();
-
-            // Sort by absolute position
-            var sortedGrids = absoluteGrids.OrderBy(kv => kv.Value).ToList();
-
-            // Convert to relative spacings
-            double previousPosition = 0;
-            for (int i = 0; i < sortedGrids.Count; i++)
+            ModelObjectEnumerator grids = model.GetModelObjectSelector().GetAllObjectsWithType(ModelObject.ModelObjectEnum.GRID);
+            while (grids.MoveNext())
             {
-                string label = sortedGrids[i].Key;
-                double absolutePosition = sortedGrids[i].Value;
-                double relativeSpacing = (i == 0) ? absolutePosition : absolutePosition - previousPosition;
-
-                // Round to minimize floating point issues
-                relativeSpacing = Math.Round(relativeSpacing, 2);
-
-                result[label] = relativeSpacing;
-                previousPosition = absolutePosition;
+                ModelObject grid = grids.Current;
+                if (grid != null)
+                    grid.Delete();
             }
-
-            return result;
         }
-
-        private string FormatGridsForDisplay(Dictionary<string, double> gridSpacings)
+        
+        // Add this method for handling the Apply Custom Grid button click
+        private void CreateGridbtn_Click(object sender, EventArgs e)
         {
-            // Just convert the dictionary to a formatted string without changing the values
-            StringBuilder result = new StringBuilder();
-
-            // Sort by key for consistent display
-            var sortedGrids = gridSpacings.OrderBy(kv => kv.Key).ToList();
-
-            for (int i = 0; i < sortedGrids.Count; i++)
-            {
-                if (i > 0) result.Append(" ");
-                result.Append($"{sortedGrids[i].Key}:{sortedGrids[i].Value.ToString(CultureInfo.InvariantCulture)}");
-            }
-
-            return result.ToString();
-        }
-
-        private void DetermineGridAxis(Plane plane, string label,
-            Dictionary<string, double> xGrids, Dictionary<string, double> yGrids, Dictionary<string, double> zGrids)
-        {
-            // Get dot products to check alignment with global axes
-            Vector globalX = new Vector(1, 0, 0);
-            Vector globalY = new Vector(0, 1, 0);
-            Vector globalZ = new Vector(0, 0, 1);
-
-            // Calculate dot products to determine plane orientation
-            double dotX1 = DotProduct(plane.AxisX, globalX);
-            double dotY2 = DotProduct(plane.AxisY, globalY);
-
-            const double threshold = 0.7; // Threshold for alignment
-
-            // Check if this is a horizontal plane (Z grid)
-            if (Math.Abs(dotX1) > threshold && Math.Abs(dotY2) > threshold)
-            {
-                zGrids[label] = plane.Origin.Z;
-                return;
-            }
-
-            // Check label format
-            bool isNumericLabel = char.IsDigit(label[0]);
-
-            // Calculate normal vector to help determine plane orientation
-            Vector normal = GetPlaneNormalVector(plane);
-
-            // Vertical planes - check alignment with global axes
-            if (Math.Abs(normal.X) > threshold)
-            {
-                xGrids[label] = plane.Origin.X;
-                return;
-            }
-            else if (Math.Abs(normal.Y) > threshold)
-            {
-                yGrids[label] = plane.Origin.Y;
-                return;
-            }
-
-            // Fallback for cases that don't align well with axes
-            // Determine based on label format
-            if (Math.Abs(normal.Z) > threshold)
-                zGrids[label] = plane.Origin.Z;
-            else if (isNumericLabel)
-                yGrids[label] = plane.Origin.Y;  // Numeric labels go to Y-axis
-            else
-                xGrids[label] = plane.Origin.X;  // Alphabetic labels go to X-axis
-        }
-
-        private double DotProduct(Vector v1, Vector v2)
-        {
-            return v1.X * v2.X + v1.Y * v2.Y + v1.Z * v2.Z;
-        }
-
-        private Vector GetPlaneNormalVector(Plane plane)
-        {
-            // Calculate the normal vector of the plane using cross product
-            Vector normal = new Vector();
-            normal.X = plane.AxisX.Y * plane.AxisY.Z - plane.AxisX.Z * plane.AxisY.Y;
-            normal.Y = plane.AxisX.Z * plane.AxisY.X - plane.AxisX.X * plane.AxisY.Z;
-            normal.Z = plane.AxisX.X * plane.AxisY.Y - plane.AxisX.Y * plane.AxisY.X;
-
-            // Normalize the vector
-            double length = Math.Sqrt(normal.X * normal.X + normal.Y * normal.Y + normal.Z * normal.Z);
-            if (length > 0)
-            {
-                normal.X /= length;
-                normal.Y /= length;
-                normal.Z /= length;
-            }
-
-            return normal;
+            ModifyGridV2();
         }
     }
 }
+
