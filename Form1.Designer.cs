@@ -36,7 +36,6 @@
             this.xGridInputTextBox = new System.Windows.Forms.TextBox();
             this.yGridInputTextBox = new System.Windows.Forms.TextBox();
             this.zGridInputTextBox = new System.Windows.Forms.TextBox();
-            this.CreateGridbtn = new System.Windows.Forms.Button();
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.gridInputGroupBox.SuspendLayout();
             this.SuspendLayout();
@@ -49,7 +48,6 @@
             this.gridInputGroupBox.Controls.Add(this.xGridInputTextBox);
             this.gridInputGroupBox.Controls.Add(this.yGridInputTextBox);
             this.gridInputGroupBox.Controls.Add(this.zGridInputTextBox);
-            this.gridInputGroupBox.Controls.Add(this.CreateGridbtn);
             this.gridInputGroupBox.Location = new System.Drawing.Point(12, 12);
             this.gridInputGroupBox.Name = "gridInputGroupBox";
             this.gridInputGroupBox.Size = new System.Drawing.Size(450, 155);
@@ -105,16 +103,6 @@
             this.zGridInputTextBox.Size = new System.Drawing.Size(390, 20);
             this.zGridInputTextBox.TabIndex = 5;
             // 
-            // CreateGridbtn
-            // 
-            this.CreateGridbtn.Location = new System.Drawing.Point(37, 112);
-            this.CreateGridbtn.Name = "CreateGridbtn";
-            this.CreateGridbtn.Size = new System.Drawing.Size(79, 28);
-            this.CreateGridbtn.TabIndex = 6;
-            this.CreateGridbtn.Text = "Create Grid";
-            this.CreateGridbtn.UseVisualStyleBackColor = true;
-            this.CreateGridbtn.Click += new System.EventHandler(this.CreateGridbtn_Click);
-            // 
             // contextMenuStrip1
             // 
             this.contextMenuStrip1.Name = "contextMenuStrip1";
@@ -142,7 +130,6 @@
         private System.Windows.Forms.TextBox xGridInputTextBox;
         private System.Windows.Forms.TextBox yGridInputTextBox;
         private System.Windows.Forms.TextBox zGridInputTextBox;
-        private System.Windows.Forms.Button CreateGridbtn;
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
     }
 }

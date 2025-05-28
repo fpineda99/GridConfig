@@ -67,14 +67,18 @@
     <Reference Include="Tekla.Structures">
       <HintPath>..\..\..\..\..\..\..\Program Files\Tekla Structures\2025.0\bin\Tekla.Structures.dll</HintPath>
     </Reference>
+    <Reference Include="Tekla.Structures.Dialog">
+      <HintPath>..\..\..\..\..\..\..\..\Program Files\Tekla Structures\2025.0\bin\Tekla.Structures.Dialog.dll</HintPath>
+    </Reference>
     <Reference Include="Tekla.Structures.Drawing">
       <HintPath>..\..\..\..\..\..\..\Program Files\Tekla Structures\2025.0\bin\Tekla.Structures.Drawing.dll</HintPath>
     </Reference>
     <Reference Include="Tekla.Structures.Geometry3d.Compatibility">
       <HintPath>..\..\..\..\..\..\..\Program Files\Tekla Structures\2025.0\bin\Tekla.Structures.Geometry3d.Compatibility.dll</HintPath>
     </Reference>
-    <Reference Include="Tekla.Structures.Model">
-      <HintPath>..\..\..\..\..\..\..\Program Files\Tekla Structures\2025.0\bin\Tekla.Structures.Model.dll</HintPath>
+    <Reference Include="Tekla.Structures.Model, Version=2025.0.0.0, Culture=neutral, PublicKeyToken=2f04dbe497b71114, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\..\..\Program Files\Tekla Structures\2025.0\bin\Tekla.Structures.Model.dll</HintPath>
     </Reference>
     <Reference Include="Tekla.Technology.Serialization">
       <HintPath>..\..\..\..\..\..\..\Program Files\Tekla Structures\2025.0\bin\Tekla.Technology.Serialization.dll</HintPath>
@@ -89,6 +93,10 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="StringFormatHandling.cs" />
+    <EmbeddedResource Include="Form1.resx">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
