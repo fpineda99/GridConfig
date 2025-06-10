@@ -36,8 +36,8 @@ The Grid Config Tool is a simple utility that allows you to modify Tekla Structu
 ## Format Examples
 
 When entering grid values, use the following format:
-- X and Y coordinates: `A,B,C=1000,2000,3000` (Labels A, B, C at positions 1000, 2000, 3000)
-- Z coordinates: `+0.000,+5.000=0,5000` (Labels +0.000, +5.000 at positions 0, 5000)
+- X and Y coordinates: `A:0 BC:1000 D:2000.95 D.5:3000 E:5000`
+- Z coordinates: `+0:0.00,+5000:5000 +7000:7000.11`
 
 ## Troubleshooting
 
