@@ -1,5 +1,7 @@
 # Grid Config Tool
 
+-- older versions of tekla plugins I have made for work. In updated version I have made these for tekla versions 2024+ in a wpf ui format -- 
+
 ## Overview
 The Grid Config Tool is a simple utility that allows you to modify Tekla Structures grid labels and coordinates through a user-friendly interface. This tool helps streamline the process of updating grids in your Tekla models.
 
